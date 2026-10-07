@@ -33,7 +33,6 @@ You need **Node.js 22+**, **Git**, and **Postgres** (the easiest way to get Post
    DATABASE_URL=postgres://booking:booking@localhost:5432/booking
    OFFICE_TIMEZONE=Asia/Dubai
    AUTH_MODE=dev
-   VITE_AUTH_MODE=dev
    ```
 4. **Create the table and add demo bookings**
    ```sh
@@ -67,22 +66,34 @@ TEST_DATABASE_URL=postgres://…/booking_test npm test         # plus API integr
 npm run typecheck
 ```
 
-GitHub Actions (`.github/workflows/ci.yml`) runs the typecheck, all tests (with a Postgres service, so the integration tests always run), and the web build on every pull request and every push to `main`.
+GitHub Actions (`.github/workflows/ci.yml`) runs the typecheck, all tests (with a Postgres service, so the integration tests always run), the web build, and a build of the production Docker image on every pull request and every push to `main`.
 
 The integration tests cover the overlap constraint, including 8 simultaneous requests for the same slot, of which exactly one succeeds.
 
 ## Production
 
+The app ships as one Docker image (`Dockerfile`): the API serves the built web app from the same origin, so no CORS setup is needed. The container listens on port 8080, applies pending database migrations at startup, runs as a non-root user, and reads every setting from environment variables at runtime, including the sign-in settings the browser needs (served at `/api/client-config`). The same image works in any environment.
+
+**Deploying to Azure:** follow [`docs/azure-deployment.md`](docs/azure-deployment.md). It is a step-by-step guide for the Azure portal, covering the required resources, every setting, Entra ID sign-in, publishing the image, and checks after the first deploy.
+
+To try the production image locally:
+
 ```sh
-npm run build                                  # builds web/dist (VITE_* variables are read at build time)
-NODE_ENV=production STATIC_DIR=../web/dist npm start
+docker build -t room-booking .
+docker run --rm -p 8080:8080 --add-host=host.docker.internal:host-gateway \
+  -e DATABASE_URL=postgres://booking:booking@host.docker.internal:5432/booking \
+  -e OFFICE_TIMEZONE=Asia/Dubai \
+  -e NODE_ENV=development -e AUTH_MODE=dev \
+  room-booking
 ```
 
-The API serves the built frontend from the same origin, so no CORS setup is needed. Run `npm run migrate` on each deploy.
+Then open http://localhost:8080. `NODE_ENV=development` and `AUTH_MODE=dev` skip sign-in for this local test only; production uses the `entra` settings.
+
+Without Docker: `npm run build`, then `NODE_ENV=production STATIC_DIR=../web/dist npm start` (run `npm run migrate` first, or set `RUN_MIGRATIONS=true`).
 
 ### Configuration
 
-All settings are in [`.env.example`](.env.example). The main ones:
+All settings are environment variables, listed in [`.env.example`](.env.example). The full reference with Azure values is in [`docs/azure-deployment.md`](docs/azure-deployment.md#4-environment-variables). The main ones:
 
 - `OFFICE_TIMEZONE`: the office's IANA timezone (for example `Asia/Dubai`). Every time shown, validated, or stored is converted through this zone, whatever timezone the browser or server is in.
 - `ROOM_NAME`, `ROOM_CAPACITY`: if you change the capacity, also change the `attendees between 1 and 8` check in the migration.
@@ -94,21 +105,23 @@ Create two app registrations in the Kelmer tenant:
 1. **API** (for example "Room Booking API")
    - *Expose an API*: set the Application ID URI to `api://<api-client-id>` and add a scope named `access_as_user`.
    - In the manifest, set `"accessTokenAcceptedVersion": 2`.
-   - Set `ENTRA_TENANT_ID` and `ENTRA_API_CLIENT_ID` on the server.
+   - Set `ENTRA_TENANT_ID` and `ENTRA_API_CLIENT_ID`.
 2. **SPA** (for example "Room Booking")
    - *Authentication*: add a Single-page application platform with the app's URL as the redirect URI (and `http://localhost:5173` for development).
    - *Supported account types*: accounts in this organizational directory only.
    - *API permissions*: add `access_as_user` from the API registration and grant admin consent.
-   - Set `VITE_ENTRA_TENANT_ID`, `VITE_ENTRA_CLIENT_ID` and `VITE_ENTRA_API_SCOPE=api://<api-client-id>/access_as_user` at build time.
+   - Set `ENTRA_SPA_CLIENT_ID`. The server passes it, with the tenant and API scope, to the browser at runtime.
 
 The server accepts only tokens from the configured tenant that carry the `access_as_user` scope. The organizer is taken from the token's `oid` and `name` claims, never from the request body.
 
 ## API
 
-All endpoints require `Authorization: Bearer <token>`. Errors look like `{ "error": { "code", "message" } }`.
+All endpoints except `/api/health` and `/api/client-config` require `Authorization: Bearer <token>`. Errors look like `{ "error": { "code", "message" } }`.
 
 | Method | Path | Notes |
 | --- | --- | --- |
+| `GET` | `/api/health` | Liveness check (`{ "ok": true }`), with no sign-in needed. Use it as the App Service health check path. |
+| `GET` | `/api/client-config` | Public sign-in settings for the browser: auth mode, tenant, SPA client ID, and API scope. No sign-in needed; contains no secrets. |
 | `GET` | `/api/me` | Signed-in user, room info, office timezone, and server time. |
 | `GET` | `/api/my-bookings` | The signed-in user's bookings that have not ended yet, soonest first. |
 | `GET` | `/api/bookings?from=YYYY-MM-DD&to=YYYY-MM-DD` | Bookings that intersect those office-local days (inclusive, up to 62 days). |

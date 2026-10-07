@@ -1,0 +1,53 @@
+# Builds the production image and pushes it to Azure Container Registry.
+# Runs only when started by hand (Actions → "Publish image to Azure" → Run workflow).
+# If the Web App's continuous deployment is on, pushing :latest redeploys it.
+# Setup: docs/azure-deployment.md, step 5.4.
+name: Publish image to Azure
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: publish-image
+  cancel-in-progress: false
+
+env:
+  IMAGE: room-booking
+
+jobs:
+  publish:
+    name: Build and push to Azure Container Registry
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      REGISTRY: ${{ secrets.ACR_LOGIN_SERVER }}
+      ACR_USERNAME: ${{ secrets.ACR_USERNAME }}
+      ACR_PASSWORD: ${{ secrets.ACR_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Check repository secrets
+        run: |
+          missing=""
+          [ -n "$REGISTRY" ] || missing="$missing ACR_LOGIN_SERVER"
+          [ -n "$ACR_USERNAME" ] || missing="$missing ACR_USERNAME"
+          [ -n "$ACR_PASSWORD" ] || missing="$missing ACR_PASSWORD"
+          if [ -n "$missing" ]; then
+            echo "::error::Missing repository secrets:$missing (see docs/azure-deployment.md, step 5.4)"
+            exit 1
+          fi
+
+      - name: Log in to Azure Container Registry
+        run: echo "$ACR_PASSWORD" | docker login "$REGISTRY" --username "$ACR_USERNAME" --password-stdin
+
+      - name: Build image
+        run: docker build -t "$REGISTRY/$IMAGE:latest" -t "$REGISTRY/$IMAGE:${GITHUB_SHA::7}" .
+
+      - name: Push image
+        run: |
+          docker push "$REGISTRY/$IMAGE:${GITHUB_SHA::7}"
+          docker push "$REGISTRY/$IMAGE:latest"
+          echo "Pushed $REGISTRY/$IMAGE:latest and :${GITHUB_SHA::7}" >> "$GITHUB_STEP_SUMMARY"

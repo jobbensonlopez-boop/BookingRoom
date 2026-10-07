@@ -7,22 +7,37 @@ import {
 /**
  * Microsoft Entra ID single sign-on. Sign-in is restricted to the company
  * tenant by using a tenant-specific authority (and enforced again by the API).
- * Set VITE_AUTH_MODE=dev to skip sign-in during local development.
+ * The settings come from the server (GET /api/client-config), so they are
+ * configured with environment variables at runtime rather than baked into the
+ * build. When the server runs with AUTH_MODE=dev, sign-in is skipped.
  */
-const env = import.meta.env;
-export const devAuth = env.VITE_AUTH_MODE === 'dev';
-const scopes = [env.VITE_ENTRA_API_SCOPE as string];
+type ClientConfig =
+  | { authMode: 'entra'; tenantId: string; clientId: string; apiScope: string }
+  | { authMode: 'dev' };
 
+let devAuth = false;
+let scopes: string[] = [];
 let pca: PublicClientApplication | null = null;
 let account: AccountInfo | null = null;
 
+async function loadClientConfig(): Promise<ClientConfig> {
+  const res = await fetch('/api/client-config');
+  if (!res.ok) throw new Error(`Could not load sign-in settings (HTTP ${res.status})`);
+  return res.json();
+}
+
 /** Resolves once the user is signed in. May navigate away to the sign-in page. */
 export async function initAuth(): Promise<boolean> {
-  if (devAuth) return true;
+  const cfg = await loadClientConfig();
+  if (cfg.authMode === 'dev') {
+    devAuth = true;
+    return true;
+  }
+  scopes = [cfg.apiScope];
   pca = new PublicClientApplication({
     auth: {
-      clientId: env.VITE_ENTRA_CLIENT_ID,
-      authority: `https://login.microsoftonline.com/${env.VITE_ENTRA_TENANT_ID}`,
+      clientId: cfg.clientId,
+      authority: `https://login.microsoftonline.com/${cfg.tenantId}`,
       redirectUri: window.location.origin,
     },
     cache: { cacheLocation: 'localStorage' },
