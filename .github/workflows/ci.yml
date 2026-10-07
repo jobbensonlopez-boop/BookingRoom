@@ -57,3 +57,12 @@ jobs:
 
       - name: Build web app
         run: npm run build
+
+  docker:
+    name: Docker image builds
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build production image (not pushed)
+        run: docker build -t room-booking:ci .

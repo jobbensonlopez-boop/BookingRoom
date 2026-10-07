@@ -26,7 +26,8 @@ describe.skipIf(!url)('bookings API', () => {
   beforeAll(async () => {
     db = createPool(url!);
     await db.query('drop table if exists bookings, schema_migrations');
-    await migrate(db, () => {});
+    // Two instances starting at once (e.g. a scale-out) must not apply the same migration twice.
+    await Promise.all([migrate(db, () => {}), migrate(db, () => {})]);
     const config = loadConfig({ DATABASE_URL: url, OFFICE_TIMEZONE: TZ, AUTH_MODE: 'dev' });
     app = createApp({ config, db, now: () => now });
   });

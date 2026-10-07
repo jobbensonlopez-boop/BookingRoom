@@ -39,6 +39,14 @@ export function createApp({ config, db, now = () => new Date() }: Deps) {
 
   app.get('/api/health', (_req, res) => res.json({ ok: true }));
 
+  // Public sign-in settings for the browser, read at runtime so one built image
+  // can be configured entirely through environment variables (e.g. Azure App Settings).
+  const { auth } = config;
+  const clientConfig = auth.mode === 'entra'
+    ? { authMode: 'entra', tenantId: auth.tenantId, clientId: auth.spaClientId, apiScope: auth.apiScope }
+    : { authMode: 'dev' };
+  app.get('/api/client-config', (_req, res) => res.json(clientConfig));
+
   const api = express.Router();
   api.use(authenticate(config.auth));
 

@@ -1,7 +1,17 @@
 import { isValidTimeZone } from '@kelmer/shared';
 
 export type AuthConfig =
-  | { mode: 'entra'; tenantId: string; clientId: string; requiredScope: string }
+  | {
+      mode: 'entra';
+      tenantId: string;
+      /** Application (client) ID of the API app registration (token audience). */
+      clientId: string;
+      requiredScope: string;
+      /** Application (client) ID of the SPA app registration (used by the browser). */
+      spaClientId: string;
+      /** Scope the browser requests, e.g. api://<api-client-id>/access_as_user. */
+      apiScope: string;
+    }
   | { mode: 'dev'; userId: string; userName: string };
 
 export interface Config {
@@ -29,11 +39,15 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
   const mode = env.AUTH_MODE ?? 'entra';
   let auth: AuthConfig;
   if (mode === 'entra') {
+    const clientId = required(env, 'ENTRA_API_CLIENT_ID');
+    const requiredScope = env.ENTRA_REQUIRED_SCOPE ?? 'access_as_user';
     auth = {
       mode,
       tenantId: required(env, 'ENTRA_TENANT_ID'),
-      clientId: required(env, 'ENTRA_API_CLIENT_ID'),
-      requiredScope: env.ENTRA_REQUIRED_SCOPE ?? 'access_as_user',
+      clientId,
+      requiredScope,
+      spaClientId: required(env, 'ENTRA_SPA_CLIENT_ID'),
+      apiScope: env.ENTRA_API_SCOPE ?? `api://${clientId}/${requiredScope}`,
     };
   } else if (mode === 'dev') {
     if (env.NODE_ENV === 'production') throw new Error('AUTH_MODE=dev is not allowed when NODE_ENV=production');
