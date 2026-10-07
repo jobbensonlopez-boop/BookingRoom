@@ -38,6 +38,15 @@ export async function listBookings(db: Db, from: Date, to: Date): Promise<Bookin
   return rows.map(toDto);
 }
 
+/** A user's bookings that have not yet ended, soonest first. */
+export async function listUpcomingFor(db: Db, organizerId: string, now: Date, limit = 100): Promise<BookingDto[]> {
+  const { rows } = await db.query<Row>(
+    `select ${COLUMNS} from bookings where organizer_id = $1 and ends_at > $2 order by starts_at limit $3`,
+    [organizerId, now, limit],
+  );
+  return rows.map(toDto);
+}
+
 export async function getBooking(db: Db, id: string): Promise<BookingDto | null> {
   const { rows } = await db.query<Row>(`select ${COLUMNS} from bookings where id = $1`, [id]);
   return rows[0] ? toDto(rows[0]) : null;

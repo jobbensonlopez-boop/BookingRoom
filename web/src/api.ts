@@ -38,6 +38,7 @@ export const api = {
   session: () => request<Session>('GET', '/api/me'),
   bookings: (from: string, to: string) =>
     request<{ bookings: BookingDto[] }>('GET', `/api/bookings?from=${from}&to=${to}`).then(r => r.bookings),
+  mine: () => request<{ bookings: BookingDto[] }>('GET', '/api/my-bookings').then(r => r.bookings),
   create: (b: { title: string; startsAt: string; endsAt: string; attendees: number }) =>
     request<{ booking: BookingDto }>('POST', '/api/bookings', b).then(r => r.booking),
   cancel: (id: string) => request<void>('DELETE', `/api/bookings/${encodeURIComponent(id)}`),

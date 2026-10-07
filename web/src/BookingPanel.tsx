@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useId, useRef } from 'react';
 import { dur, range, timeOptions, type Draft } from '@kelmer/shared';
 
 interface Props {
@@ -15,6 +15,7 @@ interface Props {
 
 export function BookingPanel({ form, organizerName, minDate, error, canSubmit, submitting, onChange, onSubmit, onClose }: Props) {
   const titleRef = useRef<HTMLInputElement>(null);
+  const id = useId();
   useEffect(() => titleRef.current?.focus(), []);
 
   const options = timeOptions.map(t => <option key={t.value} value={t.value}>{t.label}</option>);
@@ -35,34 +36,34 @@ export function BookingPanel({ form, organizerName, minDate, error, canSubmit, s
             <button type="button" className="close" onClick={onClose} aria-label="Close">✕</button>
           </div>
 
-          <label className="field">
-            Meeting title
-            <input ref={titleRef} className="input" value={form.title} maxLength={200} placeholder="e.g. Client kickoff"
+          <div className="field">
+            <label htmlFor={id + '-title'}>Meeting title</label>
+            <input id={id + '-title'} ref={titleRef} className="input" value={form.title} maxLength={200} placeholder="e.g. Client kickoff"
               onChange={e => onChange({ title: e.target.value })} />
-          </label>
-
-          <label className="field">
-            Date
-            <input type="date" className="input" value={form.date} min={minDate}
-              onChange={e => e.target.value && onChange({ date: e.target.value })} />
-          </label>
-
-          <div className="two-col">
-            <label className="field">
-              Start
-              <select className="input" value={form.start} onChange={e => onChange({ start: +e.target.value })}>{options}</select>
-            </label>
-            <label className="field">
-              End
-              <select className="input" value={form.end} onChange={e => onChange({ end: +e.target.value })}>{options}</select>
-            </label>
           </div>
 
-          <label className="field">
-            Attendees
-            <input type="number" className="input attendees" min={1} value={form.attendees}
+          <div className="field">
+            <label htmlFor={id + '-date'}>Date</label>
+            <input id={id + '-date'} type="date" className="input" value={form.date} min={minDate}
+              onChange={e => e.target.value && onChange({ date: e.target.value })} />
+          </div>
+
+          <div className="two-col">
+            <div className="field">
+              <label htmlFor={id + '-start'}>Start</label>
+              <select id={id + '-start'} className="input" value={form.start} onChange={e => onChange({ start: +e.target.value })}>{options}</select>
+            </div>
+            <div className="field">
+              <label htmlFor={id + '-end'}>End</label>
+              <select id={id + '-end'} className="input" value={form.end} onChange={e => onChange({ end: +e.target.value })}>{options}</select>
+            </div>
+          </div>
+
+          <div className="field">
+            <label htmlFor={id + '-attendees'}>Attendees</label>
+            <input id={id + '-attendees'} type="number" className="input attendees" min={1} value={form.attendees}
               onChange={e => onChange({ attendees: Math.max(0, parseInt(e.target.value || '0', 10) || 0) })} />
-          </label>
+          </div>
 
           <div className="meta">Booked by {organizerName} · {form.end > form.start ? dur(form.end - form.start) : '—'}</div>
 

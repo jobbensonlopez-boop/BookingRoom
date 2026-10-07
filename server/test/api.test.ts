@@ -112,6 +112,17 @@ describe.skipIf(!url)('bookings API', () => {
     expect((await request(app).delete('/api/bookings/not-a-uuid')).status).toBe(404);
   });
 
+  it("lists only the signed-in user's bookings that have not ended", async () => {
+    await book({ title: 'Mine later', startsAt: at('16:00'), endsAt: at('17:00') });
+    await book({ title: 'Mine sooner', startsAt: at('11:00'), endsAt: at('12:00') });
+    await book({ title: 'Theirs', startsAt: at('14:00'), endsAt: at('15:00') }, 'Sarah K.');
+    let res = await request(app).get('/api/my-bookings');
+    expect(res.body.bookings.map((b: any) => b.title)).toEqual(['Mine sooner', 'Mine later']);
+    now = new Date(at('12:00'));
+    res = await request(app).get('/api/my-bookings');
+    expect(res.body.bookings.map((b: any) => b.title)).toEqual(['Mine later']);
+  });
+
   it('validates list parameters', async () => {
     expect((await request(app).get('/api/bookings?from=2026-10-08&to=2026-10-07')).status).toBe(400);
     expect((await request(app).get('/api/bookings?from=x&to=y')).status).toBe(400);

@@ -10,7 +10,7 @@ import { authenticate } from './auth';
 import type { Config } from './config';
 import {
   PG_CHECK_VIOLATION, PG_EXCLUSION_VIOLATION, PG_INVALID_TEXT,
-  deleteBooking, getBooking, insertBooking, listBookings, type Db,
+  deleteBooking, getBooking, insertBooking, listBookings, listUpcomingFor, type Db,
 } from './db';
 
 export interface Deps {
@@ -56,6 +56,10 @@ export function createApp({ config, db, now = () => new Date() }: Deps) {
       throw new HttpError(400, 'bad_request', 'Query parameters "from" and "to" must be dates (YYYY-MM-DD), from ≤ to.');
     if (addDays(from, MAX_RANGE_DAYS) < to) throw new HttpError(400, 'bad_request', `Range is limited to ${MAX_RANGE_DAYS} days.`);
     res.json({ bookings: await dayRange(from, to) });
+  }));
+
+  api.get('/my-bookings', wrap(async (req, res) => {
+    res.json({ bookings: await listUpcomingFor(db, req.user!.id, now()) });
   }));
 
   api.post('/bookings', wrap(async (req, res) => {

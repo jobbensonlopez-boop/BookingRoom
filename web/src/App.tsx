@@ -7,6 +7,7 @@ import {
 import { ApiError, api, type Session } from './api';
 import { BookingPanel } from './BookingPanel';
 import { ConfirmDialog } from './ConfirmDialog';
+import { MyBookingsPanel } from './MyBookingsPanel';
 
 const REFRESH_MS = 30_000;
 const TOAST_MS = 3_500;
@@ -45,9 +46,25 @@ function RoomBooking({ session }: { session: Session }) {
   const [submitting, setSubmitting] = useState(false);
   const [confirming, setConfirming] = useState<Booking | null>(null);
 
+  // ---- My bookings panel ----
+  const [mineOpen, setMineOpen] = useState(false);
+  const [mine, setMine] = useState<Booking[] | null>(null);
+  const [mineError, setMineError] = useState<string | null>(null);
+  const loadMine = useCallback(async () => {
+    try {
+      setMine((await api.mine()).map(d => fromDto(d, tz)));
+      setMineError(null);
+    } catch (e) {
+      setMineError((e as Error).message);
+    }
+  }, [tz]);
+
   // ---- Data: the visible 7-day window, plus any day selected/being booked beyond it ----
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
+  // Nothing availability-related is shown until the first fetch lands, so the
+  // room never flashes as "Available"/"All free" while bookings are loading.
+  const [loaded, setLoaded] = useState(false);
   const lastDay = days[days.length - 1];
   const rangesKey = JSON.stringify([
     [clock.today, lastDay],
@@ -63,6 +80,7 @@ function RoomBooking({ session }: { session: Session }) {
       for (const d of lists.flat()) byId.set(d.id, fromDto(d, tz));
       setBookings([...byId.values()]);
       setLoadError(null);
+      setLoaded(true);
     } catch (e) {
       if (id === reqId.current) setLoadError((e as Error).message);
     }
@@ -103,13 +121,20 @@ function RoomBooking({ session }: { session: Session }) {
   const rows = agenda(bookings, selected, clock, me.id);
   const validation = validate(form, bookings, clock, capacity);
   const error = validation?.message ?? serverError;
-  const canSubmit = isSubmittable(form, validation) && !serverError && !submitting;
+  const canSubmit = loaded && isSubmittable(form, validation) && !serverError && !submitting;
 
   // ---- Actions ----
   const openWith = (start: number, end: number) => {
     setForm(f => ({ ...f, date: selected, start, end }));
     setServerError(null);
+    setMineOpen(false);
     setPanelOpen(true);
+  };
+  const openMine = () => {
+    setPanelOpen(false);
+    setMine(null);
+    setMineOpen(true);
+    loadMine();
   };
   const openNew = () => {
     const gap = rows.find(r => r.kind === 'gap');
@@ -156,19 +181,26 @@ function RoomBooking({ session }: { session: Session }) {
     try {
       await api.cancel(b.id);
       setBookings(list => list.filter(x => x.id !== b.id));
+      setMine(list => list && list.filter(x => x.id !== b.id));
       showToast(`Cancelled “${b.title}” · ${range(b.start, b.end)}`);
     } catch (e) {
       showToast((e as Error).message);
       refresh();
+      if (mineOpen) loadMine();
     }
   };
 
+  // Escape closes a side panel (the confirm dialog handles its own Escape).
   useEffect(() => {
-    if (!panelOpen) return;
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setPanelOpen(false);
+    if ((!panelOpen && !mineOpen) || confirming) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      setPanelOpen(false);
+      setMineOpen(false);
+    };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [panelOpen]);
+  }, [panelOpen, mineOpen, confirming]);
 
   return (
     <div className="screen">
@@ -176,11 +208,14 @@ function RoomBooking({ session }: { session: Session }) {
         <img src="/kelmer-logo.png" alt="Kelmer Group" className="logo" />
         <div className="divider" />
         <div className="app-title">Room booking</div>
-        <span className={'status ' + (status.busy ? 'busy' : 'free')} role="status">
-          <span className="dot" />
-          {statusLabel(status)}
-        </span>
+        {loaded && (
+          <span className={'status ' + (status.busy ? 'busy' : 'free')} role="status">
+            <span className="dot" />
+            {statusLabel(status)}
+          </span>
+        )}
         <div className="spacer" />
+        <button className="btn secondary appbar-secondary" onClick={openMine}>My bookings</button>
         <button className="btn primary" onClick={openNew}>+ New booking</button>
         <div className="avatar" title={me.name} aria-label={me.name}>{initials(me.name)}</div>
       </header>
@@ -192,7 +227,7 @@ function RoomBooking({ session }: { session: Session }) {
             <button key={d} className={'day' + (d === selected ? ' selected' : '')} aria-pressed={d === selected} onClick={() => setPickedDate(d)}>
               <span className="dow">{d === clock.today ? 'Today' : shortWeekday(d)}</span>
               <span className="num">{dayOfMonth(d)}</span>
-              <span className="count">{n ? `${n} booked` : 'All free'}</span>
+              <span className="count">{!loaded ? '\u00a0' : n ? `${n} booked` : 'All free'}</span>
             </button>
           );
         })}
@@ -205,7 +240,8 @@ function RoomBooking({ session }: { session: Session }) {
         </div>
         {loadError && <div className="msg error" role="alert">{loadError}</div>}
         <div className="agenda">
-          {rows.map(r =>
+          {!loaded && !loadError && <div className="empty">Loading…</div>}
+          {loaded && rows.map(r =>
             r.kind === 'booking' ? (
               <div key={r.booking.id} className={'row booking' + (r.isPast ? ' past' : '')}>
                 <div className="range">{r.range}</div>
@@ -227,7 +263,7 @@ function RoomBooking({ session }: { session: Session }) {
               </div>
             ),
           )}
-          {!rows.length && <div className="empty">No free time left on this day.</div>}
+          {loaded && !rows.length && <div className="empty">No free time left on this day.</div>}
         </div>
         {toast && <div className="toast" role="status">{toast}</div>}
       </main>
@@ -243,6 +279,20 @@ function RoomBooking({ session }: { session: Session }) {
           onChange={updateForm}
           onSubmit={submit}
           onClose={() => setPanelOpen(false)}
+        />
+      )}
+
+      {mineOpen && (
+        <MyBookingsPanel
+          bookings={mine}
+          error={mineError}
+          clock={clock}
+          onShowDay={date => {
+            setPickedDate(date);
+            setMineOpen(false);
+          }}
+          onCancel={setConfirming}
+          onClose={() => setMineOpen(false)}
         />
       )}
 
