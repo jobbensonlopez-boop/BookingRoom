@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<template id="__bundler_thumbnail"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#f2a31b"></rect><rect x="30" y="30" width="40" height="40" rx="4" fill="#3b3a3c"></rect></svg></template>
+<style>
+body{margin:0;background:#ecebe9;font-family:"Segoe UI","Segoe UI Web (West European)",-apple-system,"Helvetica Neue",Helvetica,Arial,sans-serif;color:#242424;-webkit-font-smoothing:antialiased}
+a{color:#8a5a00}a:hover{color:#5c3c00}
+input,select,button{font-family:inherit}
+</style>
+</helmet>
+<div data-screen-label="Room booking" style="width:100%;height:100vh;min-height:640px;background:#faf9f8;overflow:hidden;display:flex;flex-direction:column;position:relative">
+<div style="height:52px;background:#fff;border-bottom:1px solid #e1dfdd;display:flex;align-items:center;padding:0 20px;gap:16px;flex-shrink:0">
+<img src="assets/kelmer-logo.png" alt="Kelmer Group" style="height:40px;width:auto"></img>
+<div style="width:1px;height:24px;background:#e1dfdd"></div>
+<div style="font-size:16px;font-weight:600">Room booking</div>
+<sc-if value="{{ st.busy }}" hint-placeholder-val="{{ true }}"><span style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:#a4262c;background:#fde7e9;padding:4px 10px;border-radius:12px"><span style="width:8px;height:8px;border-radius:50%;background:#c50f1f"></span>Occupied until {{ st.untilLabel }}</span></sc-if>
+<sc-if value="{{ st.free }}"><span style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;color:#0e700e;background:#dff6dd;padding:4px 10px;border-radius:12px"><span style="width:8px;height:8px;border-radius:50%;background:#107c10"></span>Available · {{ st.freeShort }}</span></sc-if>
+<div style="flex:1"></div>
+<button onClick="{{ c.openNew }}" style="height:32px;padding:0 16px;background:#f2a31b;color:#1f1f1f;border:none;border-radius:4px;font-size:14px;font-weight:600;cursor:pointer" style-hover="background:#e0930c">+ New booking</button>
+<div style="width:32px;height:32px;border-radius:50%;background:#5c5c60;color:#fff;font-size:13px;font-weight:600;display:flex;align-items:center;justify-content:center">AM</div>
+</div>
+<div style="display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;padding:20px 32px 0;flex-shrink:0">
+<sc-for list="{{ c.days }}" as="d" hint-placeholder-count="7">
+<div onClick="{{ d.pick }}" style="min-width:0;overflow:hidden;white-space:nowrap;background:{{ d.bg }};color:{{ d.fg }};border:1px solid {{ d.border }};border-radius:8px;padding:10px 14px;cursor:pointer;display:flex;flex-direction:column;gap:2px">
+<div style="font-size:13px;font-weight:600">{{ d.dow }}</div>
+<div style="font-size:22px;font-weight:600">{{ d.num }}</div>
+<div style="font-size:12px">{{ d.count }}</div>
+</div>
+</sc-for>
+</div>
+<div style="flex:1;padding:20px 32px 28px;min-height:0;display:flex;flex-direction:column;gap:12px">
+<div style="display:flex;align-items:baseline;gap:12px"><div style="font-size:20px;font-weight:600">{{ c.dateLong }}</div><div style="font-size:14px;color:#616161">{{ roomName }} · seats {{ capacity }} · 08:00–18:00</div></div>
+<div style="flex:1;background:#fff;border:1px solid #e1dfdd;border-radius:8px;overflow:auto">
+<sc-for list="{{ c.agenda }}" as="r" hint-placeholder-count="6">
+<sc-if value="{{ r.isBooking }}">
+<div style="display:grid;grid-template-columns:140px minmax(0,1fr) 160px 120px;gap:16px;align-items:center;padding:14px 20px;border-bottom:1px solid #f0f0f0;opacity:{{ r.opacity }}">
+<div style="font-size:15px;font-weight:600">{{ r.range }}</div>
+<div style="display:flex;flex-direction:column;gap:2px"><span style="font-size:15px">{{ r.title }}</span><span style="font-size:13px;color:#616161">{{ r.dur }}</span></div>
+<div style="font-size:14px;color:#424242">{{ r.organizer }} · {{ r.attendees }}</div>
+<div style="display:flex;justify-content:flex-end">
+<sc-if value="{{ r.isNow }}"><span style="font-size:12px;font-weight:600;color:#a4262c;background:#fde7e9;padding:2px 8px;border-radius:10px">In progress</span></sc-if>
+<sc-if value="{{ r.canCancel }}"><button onClick="{{ r.cancel }}" style="height:28px;padding:0 10px;background:#fff;border:1px solid #d1d1d1;border-radius:4px;font-size:13px;cursor:pointer" style-hover="background:#fde7e9;border-color:#c50f1f">Cancel</button></sc-if>
+</div>
+</div>
+</sc-if>
+<sc-if value="{{ r.isGap }}">
+<div style="display:grid;grid-template-columns:140px minmax(0,1fr) 160px 120px;gap:16px;align-items:center;padding:10px 20px;border-bottom:1px solid #f0f0f0;background:#f8fcf8">
+<div style="font-size:14px;color:#0e700e;font-weight:600">{{ r.range }}</div>
+<div style="font-size:14px;color:#0e700e">Free · {{ r.dur }}</div>
+<div></div>
+<div style="display:flex;justify-content:flex-end"><button onClick="{{ r.pick }}" style="height:28px;padding:0 12px;background:#fff;border:1px solid #107c10;color:#0e700e;border-radius:4px;font-size:13px;font-weight:600;cursor:pointer" style-hover="background:#dff6dd">Book</button></div>
+</div>
+</sc-if>
+</sc-for>
+<sc-if value="{{ c.empty }}"><div style="padding:40px;text-align:center;color:#616161;font-size:15px">No free time left on this day.</div></sc-if>
+</div>
+<sc-if value="{{ c.f.hasToast }}"><div style="align-self:flex-start;background:#242424;color:#fff;font-size:14px;padding:10px 14px;border-radius:4px">{{ c.f.toast }}</div></sc-if>
+</div>
+<sc-if value="{{ c.open }}">
+<div onClick="{{ c.close }}" style="position:absolute;inset:52px 0 0 0;background:rgba(0,0,0,.25)"></div>
+<div style="position:absolute;top:52px;right:0;bottom:0;width:min(420px,100%);background:#fff;box-shadow:-8px 0 24px rgba(0,0,0,.14);padding:24px;box-sizing:border-box;display:flex;flex-direction:column;gap:14px">
+<div style="display:flex;align-items:center"><div style="font-size:20px;font-weight:600;flex:1">New booking</div><button onClick="{{ c.close }}" style="width:32px;height:32px;border:none;background:transparent;font-size:18px;cursor:pointer;border-radius:4px" style-hover="background:#f5f5f5">✕</button></div>
+<label style="display:flex;flex-direction:column;gap:4px;font-size:14px;font-weight:600">Meeting title<input value="{{ c.f.title }}" onChange="{{ c.f.onTitle }}" placeholder="e.g. Client kickoff" style="height:32px;border:1px solid #d1d1d1;border-bottom:1px solid #616161;border-radius:4px;padding:0 10px;font-size:14px;font-weight:400;outline:none" style-focus="border-bottom:2px solid #f2a31b"></input></label>
+<label style="display:flex;flex-direction:column;gap:4px;font-size:14px;font-weight:600">Date<input type="date" value="{{ c.f.date }}" onChange="{{ c.f.onDate }}" style="height:32px;border:1px solid #d1d1d1;border-bottom:1px solid #616161;border-radius:4px;padding:0 10px;font-size:14px;font-weight:400"></input></label>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+<label style="display:flex;flex-direction:column;gap:4px;font-size:14px;font-weight:600">Start<select value="{{ c.f.start }}" onChange="{{ c.f.onStart }}" style="height:32px;border:1px solid #d1d1d1;border-bottom:1px solid #616161;border-radius:4px;padding:0 8px;font-size:14px;background:#fff"><sc-for list="{{ timeOptions }}" as="t"><option value="{{ t.v }}">{{ t.label }}</option></sc-for></select></label>
+<label style="display:flex;flex-direction:column;gap:4px;font-size:14px;font-weight:600">End<select value="{{ c.f.end }}" onChange="{{ c.f.onEnd }}" style="height:32px;border:1px solid #d1d1d1;border-bottom:1px solid #616161;border-radius:4px;padding:0 8px;font-size:14px;background:#fff"><sc-for list="{{ timeOptions }}" as="t"><option value="{{ t.v }}">{{ t.label }}</option></sc-for></select></label>
+</div>
+<label style="display:flex;flex-direction:column;gap:4px;font-size:14px;font-weight:600">Attendees<input type="number" min="1" value="{{ c.f.attendees }}" onChange="{{ c.f.onAttendees }}" style="height:32px;width:100px;border:1px solid #d1d1d1;border-bottom:1px solid #616161;border-radius:4px;padding:0 10px;font-size:14px;font-weight:400"></input></label>
+<div style="font-size:13px;color:#616161">Booked by Alex Morgan · {{ c.f.durText }}</div>
+<sc-if value="{{ c.f.hasError }}"><div style="background:#fde7e9;color:#a4262c;font-size:14px;padding:10px 12px;border-radius:4px;line-height:1.4">{{ c.f.error }}</div></sc-if>
+<sc-if value="{{ c.f.okHint }}"><div style="background:#dff6dd;color:#0e700e;font-size:14px;padding:10px 12px;border-radius:4px">✓ {{ c.f.range }} is free</div></sc-if>
+<div style="flex:1"></div>
+<div style="display:flex;gap:8px">
+<sc-if value="{{ c.f.valid }}"><button onClick="{{ c.submit }}" style="height:36px;padding:0 20px;background:#f2a31b;color:#1f1f1f;border:none;border-radius:4px;font-size:14px;font-weight:600;cursor:pointer" style-hover="background:#e0930c">Book room</button></sc-if>
+<sc-if value="{{ c.f.invalid }}"><button style="height:36px;padding:0 20px;background:#f0f0f0;color:#8a8a8a;border:none;border-radius:4px;font-size:14px;font-weight:600;cursor:not-allowed">Book room</button></sc-if>
+<button onClick="{{ c.close }}" style="height:36px;padding:0 16px;background:#fff;border:1px solid #d1d1d1;border-radius:4px;font-size:14px;cursor:pointer" style-hover="background:#f5f5f5">Cancel</button>
+</div>
+</div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;demoTime&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;10:40&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Prototype&quot;},&quot;capacity&quot;:{&quot;editor&quot;:&quot;int&quot;,&quot;default&quot;:8,&quot;min&quot;:2,&quot;max&quot;:30,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Room&quot;},&quot;roomName&quot;:{&quot;editor&quot;:&quot;text&quot;,&quot;default&quot;:&quot;Boardroom&quot;,&quot;tsType&quot;:&quot;string&quot;,&quot;section&quot;:&quot;Room&quot;}}">
+const DAY0 = 480, DAY1 = 1080, ME = 'Alex Morgan';
+const pad = n => String(n).padStart(2, '0');
+const fmt = m => pad(Math.floor(m / 60)) + ':' + pad(m % 60);
+const iso = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+const addDays = (s, n) => { const d = new Date(s + 'T12:00:00'); d.setDate(d.getDate() + n); return iso(d); };
+const dur = m => { const h = Math.floor(m / 60), r = m % 60; return (h ? h + 'h' : '') + (h && r ? ' ' : '') + (r ? r + 'm' : '') || '0m'; };
+const longDate = s => new Date(s + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+const TODAY = iso(new Date());
+let uid = 100;
+function seed() {
+  const t = TODAY, n1 = addDays(t, 1), n2 = addDays(t, 2);
+  const b = (date, s, e, title, attendees, organizer) => ({ id: uid++, date, start: s, end: e, title, attendees, organizer });
+  return [
+    b(t, 540, 570, 'Daily stand-up', 6, 'Omar H.'),
+    b(t, 600, 690, 'Client call – Al Noor', 5, 'Sarah K.'),
+    b(t, 780, 840, 'Lunch & learn: VAT update', 8, 'Rania B.'),
+    b(t, 930, 990, 'Proposal review', 4, ME),
+    b(n1, 540, 570, 'Daily stand-up', 6, 'Omar H.'),
+    b(n1, 660, 780, 'Workshop – market entry', 7, 'Sarah K.'),
+    b(n2, 540, 570, 'Daily stand-up', 6, 'Omar H.'),
+    b(n2, 840, 900, '1:1 Review', 2, ME),
+  ];
+}
+const blankForm = date => ({ date, start: 720, end: 780, title: '', attendees: 4, toast: '', toastT: 0 });
+class Component extends DCLogic {
+  state = { bookings: seed(), forms: { a: blankForm(TODAY), b: blankForm(TODAY), c: blankForm(TODAY) }, cDate: TODAY, cOpen: false, tick: 0 };
+  componentDidMount() { this.iv = setInterval(() => this.setState(s => ({ tick: s.tick + 1 })), 30000); }
+  componentWillUnmount() { clearInterval(this.iv); this.timers && Object.values(this.timers).forEach(clearTimeout); }
+  now() {
+    const d = (this.props.demoTime ?? '10:40').trim(), m = d.match(/^(\d{1,2}):(\d{2})$/);
+    if (m) return +m[1] * 60 + +m[2];
+    const n = new Date(); return n.getHours() * 60 + n.getMinutes();
+  }
+  dayList(date) { return this.state.bookings.filter(b => b.date === date).sort((x, y) => x.start - y.start); }
+  setForm(k, patch) { this.setState(s => ({ forms: { ...s.forms, [k]: { ...s.forms[k], ...patch } } })); }
+  toast(k, msg) {
+    this.setForm(k, { toast: msg });
+    this.timers = this.timers || {}; clearTimeout(this.timers[k]);
+    this.timers[k] = setTimeout(() => this.setForm(k, { toast: '' }), 3500);
+  }
+  validate(f) {
+    const cap = this.props.capacity ?? 8, now = this.now();
+    if (f.end <= f.start) return 'End time must be after the start time.';
+    if (f.date < TODAY || (f.date === TODAY && f.start < now - 4)) return 'That start time has already passed.';
+    const clash = this.dayList(f.date).find(b => b.start < f.end && f.start < b.end);
+    if (clash) return `Overlaps with “${clash.title}” (${fmt(clash.start)}–${fmt(clash.end)}). Pick another time.`;
+    if (f.attendees > cap) return `The room seats up to ${cap} people.`;
+    if (f.attendees < 1) return 'Add at least 1 attendee.';
+    return '';
+  }
+  book(k, f) {
+    const err = this.validate(f);
+    if (err || !f.title.trim()) return false;
+    this.setState(s => ({ bookings: [...s.bookings, { id: uid++, date: f.date, start: f.start, end: f.end, title: f.title.trim(), attendees: f.attendees, organizer: ME }] }));
+    this.setForm(k, { title: '' });
+    this.toast(k, `Booked “${f.title.trim()}” · ${fmt(f.start)}–${fmt(f.end)}`);
+    return true;
+  }
+  formVals(k) {
+    const f = this.state.forms[k], error = this.validate(f), valid = !error && !!f.title.trim();
+    const ev = fn => e => fn(e.target.value);
+    return {
+      ...f, error, hasError: !!error, valid, invalid: !valid, okHint: !error,
+      range: fmt(f.start) + '–' + fmt(f.end), durText: f.end > f.start ? dur(f.end - f.start) : '—',
+      hasToast: !!f.toast,
+      onTitle: ev(v => this.setForm(k, { title: v })),
+      onDate: ev(v => v && this.setForm(k, { date: v })),
+      onStart: ev(v => { const s = +v; this.setForm(k, f.end <= s ? { start: s, end: Math.min(s + 60, 1200) } : { start: s }); }),
+      onEnd: ev(v => this.setForm(k, { end: +v })),
+      onAttendees: ev(v => this.setForm(k, { attendees: Math.max(0, parseInt(v || '0', 10)) })),
+      submit: () => this.book(k, f),
+      reset: () => this.setForm(k, { ...blankForm(f.date) }),
+    };
+  }
+  gaps(date, from) {
+    const out = []; let cur = Math.max(DAY0, from);
+    for (const b of this.dayList(date)) { if (b.end <= cur) continue; if (b.start > cur) out.push([cur, b.start]); cur = Math.max(cur, b.end); }
+    if (cur < DAY1) out.push([cur, DAY1]);
+    return out.filter(g => g[1] - g[0] >= 15);
+  }
+  agenda(date, onPick) {
+    const now = this.now(), isToday = date === TODAY, from = isToday ? Math.ceil(now / 15) * 15 : DAY0;
+    const rows = this.dayList(date).map(b => ({ ...b, isBooking: true, isGap: false, range: fmt(b.start) + '–' + fmt(b.end), dur: dur(b.end - b.start), isNow: isToday && b.start <= now && now < b.end, opacity: isToday && b.end <= now ? 0.5 : 1, canCancel: b.organizer === ME && !(isToday && b.start <= now), cancel: () => this.setState(s => ({ bookings: s.bookings.filter(x => x.id !== b.id) })) }));
+    this.gaps(date, from).forEach(([s, e]) => rows.push({ isBooking: false, isGap: true, start: s, end: e, range: fmt(s) + '–' + fmt(e), dur: dur(e - s), pick: () => onPick(s, Math.min(s + 60, e)) }));
+    return rows.sort((x, y) => x.start - y.start);
+  }
+  status() {
+    const now = this.now(), list = this.dayList(TODAY);
+    const cur = list.find(b => b.start <= now && now < b.end);
+    if (cur) return { busy: true, free: false, untilLabel: fmt(cur.end), curTitle: cur.title, curOrganizer: cur.organizer, curAttendees: cur.attendees, minsLeft: cur.end - now, progress: Math.round((now - cur.start) / (cur.end - cur.start) * 100) };
+    const next = list.find(b => b.start > now);
+    const freeText = now >= DAY1 ? 'No more bookings today' : next ? `Free until ${fmt(next.start)} · next: ${next.title}` : 'Free for the rest of the day';
+    return { busy: false, free: true, freeText, freeShort: next ? 'until ' + fmt(next.start) : 'rest of day', nextStart: next ? next.start : DAY1 };
+  }
+  renderVals() {
+    const now = this.now(), st = this.status(), cap = this.props.capacity ?? 8;
+    const timeOptions = []; for (let m = 420; m <= 1200; m += 15) timeOptions.push({ v: m, label: fmt(m) });
+    const fa = this.formVals('a'), fb = this.formVals('b'), fc = this.formVals('c');
+    // 1a
+    const aList = this.dayList(fa.date);
+    const slots = []; for (let m = DAY0; m < DAY1 + 30; m += 30) slots.push({ top: m - DAY0 + 10, label: m % 60 === 0 ? fmt(m) : '', line: m % 60 === 0 ? '#e1dfdd' : '#f3f2f1', pick: () => m < DAY1 && this.setForm('a', { start: m, end: m + 60 }) });
+    const a = {
+      f: fa, slots,
+      items: aList.map(b => ({ ...b, top: b.start - DAY0 + 10, h: Math.max(b.end - b.start - 2, 20), range: fmt(b.start) + '–' + fmt(b.end) })),
+      showDraft: fa.end > fa.start, draftTop: Math.max(fa.start, DAY0) - DAY0 + 10, draftH: Math.max(Math.min(fa.end, DAY1) - Math.max(fa.start, DAY0), 18), draftColor: fa.hasError ? '#c50f1f' : '#d48806',
+      showNow: fa.date === TODAY && now >= DAY0 && now <= DAY1, nowTop: now - DAY0 + 10,
+      dateLong: longDate(fa.date), countText: aList.length + (aList.length === 1 ? ' booking' : ' bookings'),
+      prevDay: () => this.setForm('a', { date: addDays(fa.date, -1) }), nextDay: () => this.setForm('a', { date: addDays(fa.date, 1) }), goToday: () => this.setForm('a', { date: TODAY }),
+    };
+    // 1b
+    const pct = m => (Math.min(Math.max(m, DAY0), DAY1) - DAY0) / 6;
+    const b = { f: fb, showDraft: fb.date === TODAY && fb.end > fb.start, draftLeft: pct(fb.start), draftWidth: pct(fb.end) - pct(fb.start), showNow: now >= DAY0 && now <= DAY1, nowLeft: pct(now) };
+    const bItems = this.dayList(TODAY).map(x => ({ ...x, left: pct(x.start), width: pct(x.end) - pct(x.start) }));
+    const bAgenda = this.agenda(TODAY, (s, e) => this.setForm('b', { date: TODAY, start: s, end: e }));
+    const qStart = Math.ceil(now / 5) * 5;
+    const quick = st.free && now < DAY1 ? [15, 30, 60].filter(d => qStart + d <= st.nextStart).map(d => ({ label: d + ' min', book: () => {
+      this.setState(s => ({ bookings: [...s.bookings, { id: uid++, date: TODAY, start: qStart, end: qStart + d, title: 'Ad-hoc meeting', attendees: 2, organizer: ME }] }));
+      this.toast('b', `Booked now · ${fmt(qStart)}–${fmt(qStart + d)}`);
+    } })) : [];
+    // 1c
+    const days = []; let d = TODAY;
+    while (days.length < 7) { const dt = new Date(d + 'T12:00:00'), wd = dt.getDay(); if (wd !== 0 && wd !== 6) { const dd = d, n = this.dayList(dd).length, sel = dd === this.state.cDate; days.push({ dow: dd === TODAY ? 'Today' : dt.toLocaleDateString('en-GB', { weekday: 'short' }), num: dt.getDate(), count: n ? n + ' booked' : 'All free', bg: sel ? '#3b3a3c' : '#fff', fg: sel ? '#fff' : '#242424', border: sel ? '#3b3a3c' : '#e1dfdd', pick: () => this.setState({ cDate: dd }) }); } d = addDays(d, 1); }
+    const openWith = (s, e) => { this.setForm('c', { date: this.state.cDate, start: s, end: e }); this.setState({ cOpen: true }); };
+    const cAgenda = this.agenda(this.state.cDate, openWith);
+    const firstGap = cAgenda.find(r => r.isGap);
+    const c = {
+      f: fc, days, agenda: cAgenda, empty: !cAgenda.length, dateLong: longDate(this.state.cDate), open: this.state.cOpen,
+      openNew: () => firstGap ? openWith(firstGap.start, Math.min(firstGap.start + 60, firstGap.end)) : openWith(720, 780),
+      close: () => this.setState({ cOpen: false }),
+      submit: () => { if (this.book('c', this.state.forms.c)) this.setState({ cOpen: false, cDate: this.state.forms.c.date }); },
+    };
+    return { st, a, b, bItems, bAgenda, quick, c, timeOptions, nowLabel: fmt(now), todayLabel: longDate(TODAY), capacity: cap, roomName: this.props.roomName ?? 'Boardroom' };
+  }
+}
+</script>
+</body>
+</html>
