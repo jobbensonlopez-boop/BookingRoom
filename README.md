@@ -21,7 +21,6 @@ You need **Node.js 22+**, **Git**, and **Postgres** (the easiest way to get Post
    ```sh
    git clone https://github.com/jobbensonlopez-boop/BookingRoom.git
    cd BookingRoom
-   git checkout claude/readme-implementation-49qo2j   # until it is merged
    npm install
    ```
 2. **Start Postgres.** With Docker:
