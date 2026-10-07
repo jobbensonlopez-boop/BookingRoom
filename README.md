@@ -67,6 +67,8 @@ TEST_DATABASE_URL=postgres://…/booking_test npm test         # plus API integr
 npm run typecheck
 ```
 
+GitHub Actions (`.github/workflows/ci.yml`) runs the typecheck, all tests (with a Postgres service, so the integration tests always run), and the web build on every pull request and every push to `main`.
+
 The integration tests cover the overlap constraint, including 8 simultaneous requests for the same slot, of which exactly one succeeds.
 
 ## Production

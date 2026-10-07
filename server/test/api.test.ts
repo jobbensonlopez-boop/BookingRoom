@@ -9,6 +9,8 @@ import { createPool, type Db } from '../src/db';
 import { migrate } from '../src/migrate';
 
 const url = process.env.TEST_DATABASE_URL;
+// In CI these tests must run; never let a missing database turn into a silent skip.
+if (process.env.CI && !url) throw new Error('TEST_DATABASE_URL must be set in CI');
 const TZ = 'Asia/Dubai';
 const DAY = '2026-10-07';
 const at = (hhmm: string, date = DAY) => {
